@@ -9,7 +9,7 @@
 <body>
 
 <h1>LuaJIT FFI reflection library</h1>
-<p><strong>Version: beta 1 (2012-06-02)</strong></p>
+<p><strong>Version: beta 2 (2013-07-06)</strong></p>
 <p>This is a beta release of an experimental and unofficial library. Feedback appreciated (to <a href="mailto:lua@corsix.org">lua@corsix.org</a>, or the LuaJIT mailing list).</p>
 <hr/><h2><tt>refct = reflect.typeof(ct)</tt></h2>
 <tt>reflect.typeof</tt> returns a so-called <tt>refct</tt> object, which describes the type passed in to
@@ -23,6 +23,11 @@
 <br/><br/>
   All <tt>refct</tt> objects have a <tt>what</tt> field, which is a string denoting the kind of type. Other fields
   will also be present on a <tt>refct</tt> object, but these vary according to the kind.
+<br/>
+<h2><tt>mt = reflect.getmetatable(ctype)</tt></h2>
+<tt>reflect.getmetatable</tt> performs the inverse of <tt>ffi.metatype</tt> - given a <tt>ctype</tt>, it returns
+  the corresponding metatable that was passed to <tt>ffi.metatype</tt>.
+<div class="example"><strong>Example:</strong><pre>reflect.getmetatable(ffi.metatype("struct {}", t)) == t</pre></div></div>
 <hr/>
 <div id="w_void" class="kind"><h2><tt>"void"</tt> kind (<tt>refct.what</tt>)</h2>
 <p class="fields"><strong>Possible attributes:</strong> <a href="#f_size">size</a>, <a href="#f_alignment">alignment</a>, <a href="#f_const">const</a>, <a href="#f_volatile">volatile</a>.</p>

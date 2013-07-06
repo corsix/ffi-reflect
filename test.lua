@@ -139,4 +139,6 @@ assert((function()local pieces = {} local function print(s) pieces[#pieces + 1] 
 ffi.cdef "enum EV{EV_A = 1, EV_B = 10, EV_C = 100};"
 for refct in reflect.typeof("enum EV"):values() do print(refct.name) end --> EV_A, EV_B, EV_C
 return table.concat(pieces, ", ") == "EV_A, EV_B, EV_C" end)())
+assert((function()local t = {}
+return reflect.getmetatable(ffi.metatype("struct {}", t)) == t end)())
 print "PASS"
