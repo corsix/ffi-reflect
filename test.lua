@@ -141,4 +141,23 @@ for refct in reflect.typeof("enum EV"):values() do print(refct.name) end --> EV_
 return table.concat(pieces, ", ") == "EV_A, EV_B, EV_C" end)())
 assert((function()local t = {}
 return reflect.getmetatable(ffi.metatype("struct {}", t)) == t end)())
+assert((function()local pieces = {} local function print(s) pieces[#pieces + 1] = tostring(s) end
+local function rec_members(refct, f)
+  if refct.members then
+    for refct in refct:members() do
+      rec_members(refct, f)
+    end
+  else
+    f(refct)
+  end
+end
+rec_members(reflect.typeof [[
+  struct {
+    int a;
+    union { struct { int b; }; int c; };
+    struct { int d; union { int e; }; };
+    int f;
+  }
+]], function(refct) print(refct.name) end)
+return table.concat(pieces, ", ") == "a, b, c, d, e, f" end)())
 print "PASS"

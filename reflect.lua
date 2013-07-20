@@ -172,7 +172,10 @@ local CTAs = {[0] =
     refct.alignment = a
     refct.attributes.align = a
   end,
-  function(a, refct) refct.transparent = true end,
+  function(a, refct)
+    refct.transparent = true
+    refct.attributes.subtype = refct.typeid
+  end,
   function(a, refct) refct.sym_name = a.name end,
   function(a, refct) error("TODO: CTA_BAD") end,
 }
@@ -286,7 +289,7 @@ end
 local function siblings(refct)
   -- Follow to the end of the attrib chain, if any.
   while refct.attributes do
-    refct = refct_from_id(CTState.tab[refct.typeid].sib)
+    refct = refct_from_id(refct.attributes.subtype or CTState.tab[refct.typeid].sib)
   end
 
   return sib_iter, nil, refct
