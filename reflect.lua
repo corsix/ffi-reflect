@@ -39,25 +39,21 @@ end
 
 -- Acquire a pointer to this Lua universe's CTState
 local CTState do
-  -- Stripped down version of global_State from lj_obj.h.
-  -- All that is needed is for the offset of the ctype_state field to be correct.
-  local global_state_ptr = ffi.typeof [[
-    struct {
-      void* _; // strhash
-      uint32_t _[2]; // strmask, strnum
-      void(*_)(void); // allocf
-      void* _; // allocd
-      uint32_t _[14]; // gc
-      char* _; // tmpbuf
-      uint32_t _[28]; // tmpbuf, nilnode, strempty*, *mask, dispatchmode, mainthref, *tv*, uvhead, hookc*
-      void(*_[3])(void); // hookf, wrapf, panic
-      uint32_t _[5]; // vmstate, bc_*, jit_*
-      uint32_t ctype_state;
-    }*
-  ]]
   local co = coroutine.create(function()end) -- Any live coroutine will do.
-  local G = ffi.cast(global_state_ptr, ffi.cast("uint32_t*", memptr(co))[2])
-  CTState = ffi.cast("CTState*", G.ctype_state)
+  local uint32_ptr = ffi.typeof("uint32_t*")
+  local G = ffi.cast(uint32_ptr, ffi.cast(uint32_ptr, memptr(co))[2])
+  -- In global_State, `MRef ctype_state` is immediately before `GCRef gcroot[GCROOT_MAX]`.
+  -- We first find (an entry in) gcroot by looking for a metamethod name string.
+  local anchor = ffi.cast("uint32_t", ffi.cast("const char*", "__index"))
+  local i = 0
+  while math.abs(tonumber(G[i] - anchor)) > 64 do
+    i = i + 1
+  end
+  -- We then work backwards looking for something resembling ctype_state.
+  repeat
+    i = i - 1
+    CTState = ffi.cast("CTState*", G[i])
+  until ffi.cast(uint32_ptr, CTState.g) == G
 end
 
 -- Acquire the CTState's miscmap table as a Lua variable
