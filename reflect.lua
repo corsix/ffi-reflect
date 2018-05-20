@@ -33,7 +33,15 @@ local function gc_str(gcref) -- Convert a GCref (to a GCstr) into a string
   end
 end
 
-local typeinfo = ffi.typeinfo or function(id)
+local typeinfo
+
+if jit and jit.version == "LuaJIT 2.0.5" then
+   typeinfo = false
+else
+   typeinfo = assert(ffi.typeinfo, "Must have LuaJIT > 2.0.5")
+end
+
+typeinfo = typeinfo or function(id)
   -- ffi.typeof is present in LuaJIT v2.1 since 8th Oct 2014 (d6ff3afc)
   -- this is an emulation layer for older versions of LuaJIT
   local ctype = (CTState or init_CTState()).tab[id]
