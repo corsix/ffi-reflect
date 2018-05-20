@@ -38,7 +38,7 @@ local typeinfo
 if jit and jit.version == "LuaJIT 2.0.5" then
    typeinfo = false
 else
-   typeinfo = assert(ffi.typeinfo, "Must have LuaJIT > 2.0.5")
+   typeinfo = assert(ffi.typeinfo, "Must have LuaJIT >= 2.0.5")
 end
 
 typeinfo = typeinfo or function(id)
