@@ -73,11 +73,12 @@ init_CTState = function()
 
   -- Acquire a pointer to this Lua universe's CTState
   local co = coroutine.create(function()end) -- Any live coroutine will do.
-  local uint32_ptr = ffi.typeof("uint32_t*")
-  local G = ffi.cast(uint32_ptr, ffi.cast(uint32_ptr, memptr(co))[2])
+  local uintgc = ffi.abi"gc64" and "uint64_t" or "uint32_t"
+  local uintgc_ptr = ffi.typeof(uintgc .. "*")
+  local G = ffi.cast(uintgc_ptr, ffi.cast(uintgc_ptr, memptr(co))[2])
   -- In global_State, `MRef ctype_state` is immediately before `GCRef gcroot[GCROOT_MAX]`.
   -- We first find (an entry in) gcroot by looking for a metamethod name string.
-  local anchor = ffi.cast("uint32_t", ffi.cast("const char*", "__index"))
+  local anchor = ffi.cast(uintgc, ffi.cast("const char*", "__index"))
   local i = 0
   while math.abs(tonumber(G[i] - anchor)) > 64 do
     i = i + 1
@@ -86,7 +87,7 @@ init_CTState = function()
   repeat
     i = i - 1
     CTState = ffi.cast("CTState*", G[i])
-  until ffi.cast(uint32_ptr, CTState.g) == G
+  until ffi.cast(uintgc_ptr, CTState.g) == G
   
   return CTState
 end
@@ -94,8 +95,14 @@ end
 init_miscmap = function()
   -- Acquire the CTState's miscmap table as a Lua variable
   local t = {}; t[0] = t
-  local tvalue = ffi.cast("uint32_t*", memptr(t))[2]
-  ffi.cast("uint32_t*", tvalue)[ffi.abi"le" and 0 or 1] = ffi.cast("uint32_t", ffi.cast("uintptr_t", (CTState or init_CTState()).miscmap))
+  local uptr = ffi.cast("uintptr_t", (CTState or init_CTState()).miscmap)
+  if ffi.abi"gc64" then
+    local tvalue = ffi.cast("uint64_t**", memptr(t))[2]
+    tvalue[0] = bit.bor(bit.lshift(bit.rshift(tvalue[0], 47), 47), uptr)
+  else
+    local tvalue = ffi.cast("uint32_t*", memptr(t))[2]
+    ffi.cast("uint32_t*", tvalue)[ffi.abi"le" and 0 or 1] = ffi.cast("uint32_t", uptr)
+  end
   miscmap = t[0]
   return miscmap
 end
