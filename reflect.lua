@@ -72,24 +72,48 @@ init_CTState = function()
   ]]
 
   -- Acquire a pointer to this Lua universe's CTState
-  local co = coroutine.create(function()end) -- Any live coroutine will do.
+  local co = coroutine.create(function(f, ...) return f(...) end)
   local uintgc = ffi.abi"gc64" and "uint64_t" or "uint32_t"
   local uintgc_ptr = ffi.typeof(uintgc .. "*")
   local G = ffi.cast(uintgc_ptr, ffi.cast(uintgc_ptr, memptr(co))[2])
-  -- In global_State, `MRef ctype_state` is immediately before `GCRef gcroot[GCROOT_MAX]`.
+  -- In global_State, `MRef ctype_state` precedes `GCRef gcroot[GCROOT_MAX]`.
   -- We first find (an entry in) gcroot by looking for a metamethod name string.
   local anchor = ffi.cast(uintgc, ffi.cast("const char*", "__index"))
   local i = 0
   while math.abs(tonumber(G[i] - anchor)) > 64 do
     i = i + 1
   end
-  -- We then work backwards looking for something resembling ctype_state.
-  repeat
-    i = i - 1
-    CTState = ffi.cast("CTState*", G[i])
-  until ffi.cast(uintgc_ptr, CTState.g) == G
-  
-  return CTState
+  -- Since Aug 2013, `GCRef cur_L` has preceded `MRef ctype_state`. Try to find it.
+  local ok, i2 = coroutine.resume(co,
+    function(coptr)
+      for i2 = i - 3, i - 20, -1 do
+        if G[i2] == coptr then return i2 end
+      end
+    end, memptr(co))
+  if ok and i2 then
+    -- If we found it, work forwards looking for something resembling ctype_state.
+    for i = i2 + 2, i - 1 do
+      local Gi = G[i]
+      if Gi ~= 0 and bit.band(Gi, 3) == 0 then
+        CTState = ffi.cast("CTState*", Gi)
+        if ffi.cast(uintgc_ptr, CTState.g) == G then
+          return CTState
+        end
+      end
+    end
+  else
+    -- Otherwise, work backwards looking for something resembling ctype_state.
+    -- Note that since Jun 2020, this walks over the PRNGState, which is bad.
+    for i = i - 1, 0, -1 do
+      local Gi = G[i]
+      if Gi ~= 0 and bit.band(Gi, 3) == 0 then
+        CTState = ffi.cast("CTState*", Gi)
+        if ffi.cast(uintgc_ptr, CTState.g) == G then
+          return CTState
+        end
+      end
+    end
+  end
 end
 
 init_miscmap = function()
